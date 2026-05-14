@@ -1,0 +1,18 @@
+# Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos
+venv/
+.env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Mac
+.DS_Store
+
+graphs/
+
+output_metrics/
