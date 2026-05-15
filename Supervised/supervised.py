@@ -412,7 +412,7 @@ class PHQ9ModelTrainer:
         this is physically impossible.  We cap the training set at
         MKL_TRAIN_CAP rows and use the full val/test sets for evaluation.
         """
-        NUM_WEAK_KERNELS = 15
+        NUM_WEAK_KERNELS = 3
         MAX_FEATURES     = 5
 
         log.info("[Supervised] SVM_MKL — building %d weak kernels...", NUM_WEAK_KERNELS)
