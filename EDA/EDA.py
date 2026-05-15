@@ -280,6 +280,7 @@ class EDA:
 
         with MemoryGuard("PCA Projection", threshold_gb=2):
             num = self.clean_df.select_dtypes(include="number")
+            num = num.loc[:, num.nunique() > 1]
             scaler = StandardScaler()
             features_scaled = scaler.fit_transform(num)
 
