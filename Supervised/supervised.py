@@ -68,7 +68,7 @@ PHQ9_CATEGORY_ORDER = [
 SVM_TRAIN_CAP = 50_000
 
 # MKL kernel matrices are (k, n, n) — cap to avoid OOM
-MKL_TRAIN_CAP = 3_000
+MKL_TRAIN_CAP = 1_000
 
 
 class PHQ9ModelTrainer:
