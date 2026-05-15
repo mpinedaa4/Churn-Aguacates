@@ -312,7 +312,7 @@ class EDA:
             # (n, 3) embedding array and the target values.
             self.visualizer.pca_projection(
                 embedding_3d=embedding_plot,
-                target=self.clean_df["phq9_total"].values,
+                target=target_plot,
                 filename="pca_projection_3d.png"
             )
             """
