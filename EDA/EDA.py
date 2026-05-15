@@ -310,6 +310,12 @@ class EDA:
 
             # Reuse the existing umap_projection visualiser — it just needs a
             # (n, 3) embedding array and the target values.
+            self.visualizer.pca_projection(
+                embedding_3d=embedding_plot,
+                target=self.clean_df["phq9_total"].values,
+                filename="pca_projection_3d.png"
+            )
+            """
             self.visualizer.umap_projection(
                 df=self.clean_df.iloc[
                     __import__("numpy").random.default_rng(42).choice(n, min(n, VIZ_SAMPLE_CAP), replace=False)
@@ -319,6 +325,7 @@ class EDA:
                 target_col="phq9_total",
                 filename="pca_projection_3d.png",
             )
+            """
 
         log.info("[EDA] PCA projection saved to pca_projection_3d.png")
         log_memory("After PCA projection")

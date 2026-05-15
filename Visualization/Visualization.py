@@ -146,43 +146,29 @@ class Visualization:
         fig.tight_layout()
         self._save(fig, "eda", filename)
 
-    def umap_projection(self, df: pd.DataFrame, features_scaled: np.ndarray, target_col: str, filename: str = "umap.png") -> None:
-        """
-        Compute and plot a 3-D UMAP projection coloured by the target.
-        """
-        reducer = umap.UMAP(
-            n_neighbors=10,
-            min_dist=0.3,
-            n_components=2,
-            low_memory=True,
-            random_state=42,
-            transform_seed=42,
-        )
-
-        # Dimensionality reduction with PCA
-        pca = PCA(n_components=15, random_state=42)
-        features_pca = pca.fit_transform(features_scaled)
-
-        embedding = reducer.fit_transform(features_pca)
+    def pca_projection(self, embedding_3d, target, filename="pca_projection_3d.png"):
 
         fig = plt.figure(figsize=(10, 8))
-        ax  = fig.add_subplot(111, projection="3d")
+        ax = fig.add_subplot(111, projection="3d")
 
-        target_vals = df[target_col].values
         sc = ax.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c=target_vals,
+            embedding_3d[:, 0],
+            embedding_3d[:, 1],
+            embedding_3d[:, 2],
+            c=target,
             cmap=PALETTE_MAIN,
             s=1,
             alpha=0.3,
             rasterized=True,
         )
-        fig.colorbar(sc, ax=ax, label=target_col, shrink=0.6)
-        ax.set_title("UMAP 3-D Projection", fontsize=13)
-        ax.set_xlabel("UMAP-1")
-        ax.set_ylabel("UMAP-2")
-        ax.set_zlabel("UMAP-3")
+
+        fig.colorbar(sc, ax=ax, label="phq9_total", shrink=0.6)
+
+        ax.set_title("PCA 3D Projection", fontsize=13)
+        ax.set_xlabel("PC1")
+        ax.set_ylabel("PC2")
+        ax.set_zlabel("PC3")
+
         self._save(fig, "eda", filename)
 
     # Unsupervised Visualizations
