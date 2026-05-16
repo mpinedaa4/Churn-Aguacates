@@ -11,8 +11,5 @@ venv/
 .ipynb_checkpoints/
 
 # Mac
-.DS_Store
+.DS_Store/
 
-graphs/
-
-output_metrics/
