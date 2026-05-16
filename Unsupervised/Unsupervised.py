@@ -472,15 +472,35 @@ class UnsupervisedLearning:
 
     # ── Relabelling ──────────────────────────────────────────────────────────
     def relabel(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Map integer cluster IDs to PHQ-9 severity labels, guaranteeing that
+        every cluster receives a UNIQUE label.
+
+        Why the original approach fails when k < 5
+        ────────────────────────────────────────────
+        The original code converted each cluster's median phq9_total to a
+        category via fixed thresholds (≤4 → Minimal, ≤9 → Mild, …).
+        When k=4 it is possible — and common — for two clusters to share
+        the same median range, producing duplicate entries in cluster_map.
+        For example with k=4: {0: "Minimal", 1: "Mild", 2: "Mild", 3: "Moderate"}.
+        The supervised step then only sees 3 distinct labels instead of 4,
+        which is what caused the 2-label confusion matrices.
+
+        Fix: rank-based assignment
+        ───────────────────────────
+        1.  Compute the median phq9_total for each of the k clusters.
+        2.  Rank clusters from lowest median to highest (rank 0 = mildest).
+        3.  Assign PHQ-9 category names by rank, always selecting k evenly
+            spaced categories from the full ordered list of 5.
+            - k=5 → ["Minimal", "Mild", "Moderate", "Moderately_Severe", "Severe"]
+            - k=4 → ["Minimal", "Mild", "Moderately_Severe", "Severe"]
+            - k=3 → ["Minimal", "Moderate", "Severe"]
+            - k=2 → ["Minimal", "Severe"]
+        This guarantees k distinct labels regardless of the actual phq9_total
+        distribution, while preserving the correct severity ordering.
+        """
         log.info("[Unsupervised] Relabelling clusters → PHQ-9 severity categories")
-
-        PHQ9_THRESHOLDS = [4, 9, 14, 19, 27]
-
-        def score_to_category(score: float) -> str:
-            for threshold, label in zip(PHQ9_THRESHOLDS, PHQ9_CATEGORIES):
-                if score <= threshold:
-                    return label
-            return PHQ9_CATEGORIES[-1]
+        log.info("[Unsupervised] optimal_k = %d", self._optimal_k)
 
         with MemoryGuard("KMeans relabel"):
             km = KMeans(n_clusters=self._optimal_k, n_init=10,
@@ -490,16 +510,48 @@ class UnsupervisedLearning:
         df_out = df.copy()
         df_out["_cluster_id"] = cluster_ids
 
+        # Median phq9_total per cluster — determines severity ordering
         cluster_medians = df_out.groupby("_cluster_id")["phq9_total"].median()
-        cluster_map     = {
-            cid: score_to_category(med)
-            for cid, med in cluster_medians.items()
+
+        # Rank clusters: 0 = lowest median (least severe) … k-1 = highest
+        sorted_clusters = cluster_medians.sort_values().index.tolist()
+
+        # Select k evenly spaced labels from the 5-category list
+        k = self._optimal_k
+        if k >= len(PHQ9_CATEGORIES):
+            selected_labels = PHQ9_CATEGORIES
+        else:
+            # np.linspace gives k evenly spaced indices into the 5-item list
+            indices = [
+                round(i) for i in
+                __import__("numpy").linspace(0, len(PHQ9_CATEGORIES) - 1, k)
+            ]
+            selected_labels = [PHQ9_CATEGORIES[i] for i in indices]
+
+        # Build the mapping: cluster_id → category name
+        cluster_map = {
+            cid: selected_labels[rank]
+            for rank, cid in enumerate(sorted_clusters)
         }
 
+        log.info("[Unsupervised] Cluster → Category mapping (%d unique labels):", k)
         for cid, cat in sorted(cluster_map.items()):
             log.info(
-                "  Cluster %d  →  %-20s  (median phq9_total = %.1f)",
+                "  Cluster %d  →  %-22s  (median phq9_total = %.1f)",
                 cid, cat, cluster_medians[cid],
+            )
+
+        # Verify uniqueness — this should never fail after the fix
+        assigned_labels = list(cluster_map.values())
+        if len(set(assigned_labels)) != k:
+            log.error(
+                "[Unsupervised] BUG: only %d unique labels for %d clusters: %s",
+                len(set(assigned_labels)), k, assigned_labels,
+            )
+        else:
+            log.info(
+                "[Unsupervised] All %d clusters have unique labels: %s",
+                k, assigned_labels,
             )
 
         df_out["cluster_label"] = df_out["_cluster_id"].map(cluster_map)
